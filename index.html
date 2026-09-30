@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Tracker Pink</title>
+<style>
+  body { font-family: 'Segoe UI', sans-serif; background:#fff0f5; margin:0; padding:15px; color:#4a2040; }
+  h1 { text-align:center; color:#d63384; margin:5px 0; }
+.sub { text-align:center; color:#b76e8a; margin-bottom:20px; }
+.section { background:white; border-radius:18px; padding:18px; margin:20px auto; max-width:1100px; box-shadow:0 4px 15px rgba(214,51,132,0.1); border:1px solid #ffd6e7; }
+.title { font-size:20px; font-weight:bold; margin-bottom:14px; padding-left:12px; border-left:5px solid #ff7bac; color:#c2185b; }
+.controls { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+  button { border:none; border-radius:20px; padding:8px 16px; cursor:pointer; font-weight:700; }
+.btn-pink { background:#ff7bac; color:white; }
+.btn-light { background:#ffe4ec; color:#c2185b; }
+.btn-outline { background:white; border:1.5px solid #ffb3c6; color:#d63384; }
+  table { width:100%; border-collapse:collapse; }
+.habit-table th,.habit-table td { border:1px solid #ffe0ea; padding:8px; text-align:center; min-width:65px; }
+.habit-table th:first-child,.habit-table td:first-child { min-width:160px; text-align:left; position:sticky; left:0; background:white; }
+.habit-table th { background:#fff0f5; color:#c2185b; font-size:12px; }
+.cell { cursor:pointer; }
+.cell:hover { background:#fff0f5; }
+  input, textarea { border:1.5px solid #ffc2d1; border-radius:12px; padding:9px 12px; outline:none; }
+  input:focus, textarea:focus { border-color:#ff7bac; }
+.input-row { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
+.task-table th { background:#ffe4ec; color:#a91e4c; }
+.task-table th,.task-table td { border:1px solid #ffd6e7; padding:10px; text-align:left; }
+.badge { background:#ffe4ec; color:#c2185b; padding:4px 10px; border-radius:20px; font-size:13px; }
+.del { color:#ff4d6d; cursor:pointer; font-weight:bold; }
+  textarea { width:100%; min-height:120px; resize:vertical; box-sizing:border-box; }
+.small { font-size:11px; color:#c08090; text-align:center; }
+</style>
+</head>
+<body>
+<h1>Daily Tracker</h1>
+<p class="sub">Track your tasks every day</p>
+
+<!-- 1 - Daily Habits -->
+<div class="section">
+  <div class="title">🎀 Daily Habits</div>
+  <div class="controls">
+    <button class="btn-pink" onclick="addHabit()">+ Add Task</button>
+    <button class="btn-light" onclick="changeStartDate()">Change Start Date</button>
+    <button class="btn-outline" onclick="goToday()">Today</button>
+    <button class="btn-outline" onclick="shareLink()">Share Link</button>
+  </div>
+  <div style="overflow-x:auto">
+    <table class="habit-table" id="habitTable"></table>
+  </div>
+  <p class="small">Click on cell to change: — → ✓ → X → —</p>
+</div>
+
+<!-- 2 - Daily Variable Tasks -->
+<div class="section">
+  <div class="title">🎀 Daily Variable Tasks</div>
+  <div class="input-row">
+    <input id="taskName" placeholder="Write task ex: Submit project" style="flex:2">
+    <input id="taskDate" type="date" style="flex:1">
+    <button class="btn-pink" onclick="addVarTask()">+ Add</button>
+  </div>
+  <table class="task-table" id="varTable">
+    <thead><tr><th>Task</th><th>Date</th><th>Done / Not Done</th><th></th></tr></thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<!-- 3 - Notes -->
+<div class="section">
+  <div class="title">🎀 My Notes</div>
+  <textarea id="notes" placeholder="Write your notes here... auto saved" oninput="saveNotes()"></textarea>
+</div>
+
+<script>
+let startDate = localStorage.getItem('pink_start')? new Date(localStorage.getItem('pink_start')) : new Date('2026-09-27');
+let habits = JSON.parse(localStorage.getItem('pink_habits')||'[]');
+if(habits.length===0){ habits=[{name:'ghjk', start:'24/09/2026', data:{}}]; }
+
+function saveH(){ localStorage.setItem('pink_habits', JSON.stringify(habits)); localStorage.setItem('pink_start', startDate.toISOString()); }
+function addDays(d,n){ let x=new Date(d); x.setDate(x.getDate()+n); return x; }
+function key(d){ return d.toISOString().slice(0,10); }
+
+function renderH(){
+  let t=document.getElementById('habitTable');
+  let h='<tr><th>Tasks</th>';
+  for(let i=0;i<12;i++){ let d=addDays(startDate,i); h+=`<th>${key(d).split('-').reverse().join('/')}<br><small>${d.toLocaleDateString('en-US',{weekday:'short'})}</small></th>`; }
+  h+='</tr>';
+  habits.forEach((hab,idx)=>{
+    h+=`<tr><td><b>${hab.name}</b><br><small style="font-size:10px">Starts: ${hab.start}</small> <span class="del" onclick="delH(${idx})"> x</span> <span style="cursor:pointer" onclick="editH(${idx})"> ✎</span></td>`;
+    for(let i=0;i<12;i++){ let d=addDays(startDate,i); let k=key(d); let v=hab.data[k]||'—'; h+=`<td class="cell" onclick="tog(${idx},'${k}')">${v}</td>`; }
+    h+='</tr>';
+  });
+  t.innerHTML=h;
+}
+function tog(i,k){ let c=habits[i].data[k]||'—'; habits[i].data[k]= c==='—'?'✓':c==='✓'?'X':'—'; saveH(); renderH(); }
+function addHabit(){ let n=prompt('Task name:'); if(n){ habits.push({name:n, start:key(new Date()).split('-').reverse().join('/'), data:{}}); saveH(); renderH(); } }
+function editH(i){ let n=prompt('Edit name:', habits[i].name); if(n){ habits[i].name=n; saveH(); renderH(); } }
+function delH(i){ if(confirm('Delete it?')){ habits.splice(i,1); saveH(); renderH(); } }
+function changeStartDate(){ let d=prompt('Start date YYYY-MM-DD', key(startDate)); if(d){ startDate=new Date(d); saveH(); renderH(); } }
+function goToday(){ startDate=new Date(); saveH(); renderH(); }
+function shareLink(){ navigator.clipboard.writeText(location.href); alert('Copied!'); }
+
+let varTasks = JSON.parse(localStorage.getItem('pink_var')||'[]');
+function saveV(){ localStorage.setItem('pink_var', JSON.stringify(varTasks)); }
+function addVarTask(){
+  let name=document.getElementById('taskName').value.trim();
+  let date=document.getElementById('taskDate').value;
+  if(!name||!date) return alert('Please write task and date');
+  varTasks.push({id:Date.now(), name, date, status:'—'});
+  saveV(); renderV(); document.getElementById('taskName').value='';
+}
+function renderV(){
+  let tb=document.querySelector('#varTable tbody'); tb.innerHTML='';
+  varTasks.sort((a,b)=>a.date.localeCompare(b.date));
+  varTasks.forEach(t=>{
+    let tr=document.createElement('tr');
+    tr.innerHTML=`<td>${t.name}</td><td><span class="badge">${t.date.split('-').reverse().join('/')}</span></td><td class="cell" onclick="toggleStatus(${t.id})" style="font-size:18px; text-align:center; cursor:pointer;">${t.status}</td><td><span class="del" onclick="delV(${t.id})">Delete</span></td>`;
+    tb.appendChild(tr);
+  });
+}
+function toggleStatus(id){ let t=varTasks.find(x=>x.id===id); if(t){ t.status= t.status==='—'?'✓':t.status==='✓'?'X':'—'; saveV(); renderV(); } }
+function delV(id){ varTasks=varTasks.filter(x=>x.id!==id); saveV(); renderV(); }
+
+function saveNotes(){ localStorage.setItem('pink_notes', document.getElementById('notes').value); }
+document.getElementById('notes').value=localStorage.getItem('pink_notes')||'';
+
+renderH(); renderV();
+</script>
+</body>
+</html>
